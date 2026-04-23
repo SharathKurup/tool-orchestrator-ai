@@ -1,0 +1,11 @@
+ollama
+geopy
+py-mon
+openmeteo-requests
+requests-cache 
+retry-requests 
+numpy 
+pandas
+dotenv
+BeautifulSoup4 #not used yet, but will be used for web scraping in the future
+timezonefinder[numba]
