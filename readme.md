@@ -87,7 +87,7 @@ tool-orchestrator-ai/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/tool-orchestrator-ai.git
+git clone https://github.com/SharathKurup/tool-orchestrator-ai.git
 cd tool-orchestrator-ai
 ````
 
