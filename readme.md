@@ -1,8 +1,8 @@
 # tool-orchestrator-ai
 
-A local LLM-powered tool orchestrator that enables offline AI models to dynamically call external tools such as weather, news, datetime, and location using a structured agent loop.
+A local LLM-powered tool orchestrator that enables offline AI models to dynamically call external tools such as weather, news, datetime, location, and web search using a structured agent loop.
 
-This project is built as an experimental system to understand and implement tool-using AI agents, with a focus on local models and extensibility.
+This project is built as an experimental system to understand and implement tool-using AI agents, with a focus on local models, privacy, and extensibility.
 
 ---
 
@@ -10,49 +10,52 @@ This project is built as an experimental system to understand and implement tool
 
 This project implements a ReAct-style loop where the language model can:
 
-1. Interpret user input  
-2. Decide when a tool is required  
-3. Generate a structured tool call  
-4. Receive tool output  
-5. Produce a final response  
+1. Interpret user input
+2. Decide when a tool is required
+3. Generate a structured tool call
+4. Execute one or multiple tools
+5. Receive tool output
+6. Produce a final response
 
-The system is designed to work with local LLMs (via Ollama), keeping everything private and offline except for external API calls used by tools.
+The system works with local LLMs (via Ollama), keeping everything private except external API calls used by tools.
 
 ---
 
 ## Features
 
-- ReAct-style agent loop (model → tool → result → model)
-- Support for multiple tools:
-  - Weather (forecast aggregation)
-  - News (latest headlines)
-  - Date & time (timezone-aware)
-  - Location (geocoding)
-- Modular tool structure
-- Prompt-controlled tool selection
-- Logging for debugging and traceability
-- Designed for local LLM usage
+* ReAct-style agent loop (model → tool → result → model)
+* Multi-tool orchestration (single + chained tool calls)
+* Supported tools:
+
+  * Weather (Tomorrow.io)
+  * News (NewsAPI)
+  * Date & Time (timezone-aware)
+  * Location (geocoding)
+  * Web Search (SearXNG - self-hosted)
+* Prompt-driven tool selection
+* Modular architecture for easy extension
+* Debug logging support
+* Designed for local LLM usage (Ollama)
+* Works across both lightweight and more capable local models (e.g., Gemma 3 for lower-end setups and Gemma 4 for higher-end setups)
 
 ---
 
 ## Architecture
 
 ```
-
 User Input
-↓
+   ↓
 LLM (Ollama)
-↓
+   ↓
 Tool Call (XML format)
-↓
-Dispatcher
-↓
-Tool Execution
-↓
+   ↓
+Parser
+   ↓
+Tool Executor
+   ↓
 Tool Output
-↓
+   ↓
 LLM (Final Response)
-
 ```
 
 ---
@@ -60,54 +63,176 @@ LLM (Final Response)
 ## Project Structure
 
 ```
-
 tool-orchestrator-ai/
 │
-├── main.py                 # Entry point and agent loop
+├── main.py
+├── docker-compose.yml
+├── .env
+├── requirements.txt
+├── README.md
+│
 ├── src/
-│   ├── constants.py        # Configuration and API keys
-│   ├── logging.py          # Logging utility
+│   ├── constants.py
+│   ├── log_config.py
+│   │
+│   ├── core/
+│   │   ├── instructions.py
+│   │   ├── parser.py
+│   │   └── tool_executor.py
+│   │
 │   ├── tools/
 │   │   ├── weather.py
 │   │   ├── news.py
-│   │   ├── datetime.py
-│   │   └── location.py
+│   │   ├── date_time.py
+│   │   ├── location.py
+│   │   └── web_search.py
+│   │
 │   └── prompts/
-│       ├── prompt.py       # Prompt loader/helper
+│       ├── prompt.py
+│       ├── default.txt
 │       └── system_instruction.txt
-├── .env                    # Environment variables (not committed)
-└── README.md
-
-````
+```
 
 ---
 
-## Setup
+## Setup Guide
 
 ### 1. Clone the repository
 
 ```bash
 git clone https://github.com/SharathKurup/tool-orchestrator-ai.git
 cd tool-orchestrator-ai
-````
-
-### 2. Create a `.env` file
-
-```env
-TOMORROW_API_KEY=your_key
-TOMORROW_BASE_URL=https://api.tomorrow.io/v4/timelines
-
-NEWS_API_KEY=your_key
-NEWS_API_BASE_URL=https://newsapi.org/v2/everything
 ```
 
-### 3. Install dependencies
+---
+
+### 2. Setup Environment Variables
+
+Create a `.env` file in the root directory:
+
+```
+# Model (keep flexible based on your system)
+MODEL_NAME=gemma4:e2b
+
+# Tomorrow.io (Weather)
+TOMORROW_API_KEY=your_api_key
+TOMORROW_BASE_URL=https://api.tomorrow.io/v4/timelines
+
+# News API
+NEWS_API_KEY=your_api_key
+NEWS_API_BASE_URL=https://newsapi.org/v2/everything
+
+# SearXNG (Web Search)
+SEARXNG_BASE_URL=http://localhost:8080
+
+# Debug
+DEBUG=True
+```
+
+Note:
+
+* `MODEL_NAME` is configurable to support both lightweight and powerful local models
+* NewsData API is currently not in use (NIU)
+
+---
+
+### 3. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Run the application
+---
+
+### 4. Setup SearXNG (Local Web Search)
+
+SearXNG is used for privacy-friendly web search and runs locally using Docker.
+
+#### Create `docker-compose.yml`
+
+```yaml
+services:
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./searxng:/etc/searxng:rw
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8080/
+      - INSTANCE_NAME=tool-orchestrator-ai
+```
+
+#### Run SearXNG
+
+```bash
+docker compose up
+```
+
+Run in background:
+
+```bash
+docker compose up -d
+```
+
+---
+
+### 5. Enable JSON Output (Important)
+
+After first run:
+
+1. Open `searxng/settings.yml`
+2. Update:
+
+```yaml
+search:
+  formats:
+    - html
+    - json
+```
+
+3. Restart container:
+
+```bash
+docker compose restart
+```
+
+4. Open in browser:
+
+```
+http://localhost:8080
+```
+
+---
+
+### 6. Optional: Fix Engine Errors
+
+You may see errors like:
+
+* Ahmia
+* Torch
+* Wikidata
+
+These are non-critical. SearXNG will continue working.
+
+To disable them, update `settings.yml`:
+
+```yaml
+engines:
+  - name: wikidata
+    engine: wikidata
+    disabled: True
+
+  - name: ahmia
+    engine: ahmia
+    disabled: True
+```
+
+---
+
+### 7. Run the Application
 
 ```bash
 python main.py
@@ -122,47 +247,72 @@ weather in Mumbai
 news about AI
 what time is it in New York
 coordinates of Taj Mahal
+who is APJ Abdul Kalam
+who was JC Bose and get news about him
 ```
 
 ---
 
-## How Tool Calling Works
+## Tool Calling Format
 
-The model generates tool calls in a strict XML format:
+The model generates tool calls in XML format:
 
 ```
 <call:get_weather city="Mumbai"/>
 ```
 
-The orchestrator:
+For multiple tools:
 
-* Detects the tool call
-* Parses parameters
-* Executes the corresponding function
-* Feeds the result back to the model
-* The model generates the final response
+```
+<call:get_websearch query="JC Bose biography"/>
+<call:get_news topic="JC Bose"/>
+```
+
+---
+
+## APIs Used
+
+### Weather (Tomorrow.io)
+
+* Simple and reliable weather API
+* Provides hourly forecast data
+* Aggregated into daily insights in the tool
+
+### News API
+
+* Used to fetch latest headlines and articles
+* Note: NewsData API integration exists in code but is currently not used (NIU)
+
+### Web Search (SearXNG)
+
+* Self-hosted meta search engine
+* Privacy-friendly (no tracking)
+* Aggregates results from multiple engines
+* Used with scraping fallback for better summaries
+
+Docs: [https://docs.searxng.org/](https://docs.searxng.org/)
 
 ---
 
 ## Limitations
 
-* XML-based parsing is fragile
-* Tool interfaces are not fully standardized
-* Limited error handling
-* Tight coupling between agent loop and tools
-* No tool schema or validation layer yet
+* XML-based tool calling is fragile
+* No strict schema validation
+* Limited retry/error handling
+* Tight coupling between tools and executor
+* Web scraping may fail for some sites
 
 ---
 
 ## Roadmap
 
-* Introduce tool registry pattern
-* Move from XML to structured JSON tool calls
-* Standardize tool interfaces
-* Add API layer (e.g., FastAPI)
-* Build a web-based interface (ChatGPT-style)
-* Add memory and multi-step planning
-* Expand tool ecosystem
+* Move from XML → JSON tool calling
+* Add tool schema validation
+* Introduce memory layer
+* Add FastAPI backend
+* Build ChatGPT-like UI (OpenWebUI style)
+* Improve multi-step reasoning
+* Add more tools (finance, coding, etc.)
 
 ---
 
@@ -172,8 +322,8 @@ This project is intended as a learning and experimentation platform for:
 
 * Tool-using AI agents
 * Local LLM integration
-* Orchestrator design patterns
-* Building blocks for larger AI systems
+* Agent orchestration patterns
+* Building blocks for AI systems
 
 ---
 
@@ -185,4 +335,6 @@ MIT License
 
 ## Author
 
-Developed as part of an ongoing exploration into AI systems, local LLMs, and practical agent architectures.
+Sharath Kurup
+
+Exploring AI systems, local LLMs, and real-world agent architectures.

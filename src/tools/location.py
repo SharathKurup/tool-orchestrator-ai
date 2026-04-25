@@ -1,6 +1,6 @@
 from geopy.geocoders import Nominatim
 from geopy.extra.rate_limiter import RateLimiter
-from src.logging import writeLog
+from src.log_config import writeLog
 
 def get_location(location_name):
     writeLog(f"Getting location for: {location_name}", "info")

@@ -3,8 +3,10 @@ def getPrompts(prompt_name):
     match prompt_name:
         case "system":
             file_name = "system_instruction"
+        case _:
+            file_name = "default"
 
-    file = open(f"src/prompts/{file_name}.txt", "r")
-    prompt = file.read()
-    file.close()
-    return prompt
+    with (open(f"src/prompts/{file_name}.txt", "r")) as file:
+        prompt = file.read()
+        file.close()
+        return prompt

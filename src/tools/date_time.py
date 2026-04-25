@@ -2,7 +2,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo # Standard library in 3.9+
 from timezonefinder import TimezoneFinder
 from .location import get_location
-from src.logging import writeLog
+from src.log_config import writeLog
 
 def get_datetime(location=None):
     # Set a default 'now' to prevent UnboundLocalError
@@ -18,7 +18,7 @@ def get_datetime(location=None):
             if tz_name:
                 # Use ZoneInfo to get the actual time in that region
                 now = datetime.now(ZoneInfo(tz_name))
-                print(f"Current time in {location} ({tz_name}): {now.strftime('%Y-%m-%d %H:%M:%S')}")
+                writeLog(f"Current time in {location} ({tz_name}): {now.strftime('%Y-%m-%d %H:%M:%S')}", "info")
             else:
                 writeLog(f"Could not find timezone for coordinates: {lat}, {lon}", "warning")
         except Exception as e:

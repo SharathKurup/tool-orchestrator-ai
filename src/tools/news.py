@@ -1,31 +1,31 @@
 import src.constants as constants
 import requests
-import src.logging as logging
+import src.log_config as logging
 
-def get_news_data(query):
-    logging.writeLog(f"Fetching news for query: {query}", "info")
+#NIU 
+def get_news_data(topic): 
+    logging.writeLog(f"Fetching news for topic: {topic}", "info")
     url =  f"{constants.NEWS_DATA_BASE_URL}?"
     url += f"apikey={constants.NEWS_DATA_API_KEY}"
-    url += f"&q={query}"
+    url += f"&q={topic}"
     url += f"&country=in"
     url += f"&category=technology,breaking"
     url += f"&timezone=asia/kolkata"
     url += f"&removeduplicate=1"
-    url += f"&size=5" 
+    url += f"&size=6" # for size 5, give 6
     
     logging.writeLog(f"Constructed URL for news data API: {url}", "info")
     response = requests.get(url)
     data = response.json()
-    # print(data)
-    logging.writeLog(f"Received news data for query: {query}", "info")
+    logging.writeLog(f"Received news data for topic: {topic}", "info")
     logging.writeLog(f"News data JSON: {data}", "info")
     return process_news_data(data,"newsdata")
 
 def process_news_data(response,source):
+    results = []
     match source:
         case "newsapi":
             articles = response.get("articles", [])
-            results = []
             for article in articles:
                 result = {
                     "source": article.get("source", {}).get("name"),
@@ -39,7 +39,6 @@ def process_news_data(response,source):
 
         case "newsdata":
             data = response.get("results", [])
-            results = []
             for item in data:
                 result = {
                     "title": item.get("title"),
@@ -50,14 +49,16 @@ def process_news_data(response,source):
                 }
                 results.append(result)
             return results
+        case _:
+            return results
 
-def get_news(query):
-    logging.writeLog(f"Fetching news for query: {query}", "info")
-    url = f"{constants.NEWS_API_BASE_URL}?q={query}&apiKey={constants.NEWS_API_KEY}&pageSize=5"
+def get_news(topic):
+    logging.writeLog(f"Fetching news for topic: {topic}", "info")
+    url = f"{constants.NEWS_API_BASE_URL}?q={topic}&apiKey={constants.NEWS_API_KEY}&pageSize=5"
     logging.writeLog(f"Constructed URL for news API: {url}", "info")
     response = requests.get(url)
     data = response.json()
-    logging.writeLog(f"Received news data for query: {query}", "info")
+    logging.writeLog(f"Received news data for topic: {topic}", "info")
     news_data = process_news_data(data,"newsapi")    
     logging.writeLog(f"News api data: {news_data}", "info")
     return news_data
